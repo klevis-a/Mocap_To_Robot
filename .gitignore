@@ -2,3 +2,13 @@
 *.asv
 
 parameters/
+
+tasks/opticalTrackingAnalysis/graphs/
+
+tasks/opticalTrackingAnalysis/\.ipynb_checkpoints/
+
+tasks/trajectoryGeneration/\.ipynb_checkpoints/
+
+tasks/trajectoryGeneration/graphs/
+
+Docs/output/

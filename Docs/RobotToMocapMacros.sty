@@ -1,0 +1,375 @@
+\ProvidesPackage{RobotToMocapMacros}[2020/01/29 Macros for the Robot to Mocap software package user manual]
+\usepackage{xifthen}
+\usepackage{hyperref}
+\usepackage{datatool}
+
+\newcommand{\sortitem}[2][\relax]{%
+	\DTLnewrow{list}% Create a new entry
+	\ifx#1\relax
+	\DTLnewdbentry{list}{sortlabel}{#2}% Add entry sortlabel (no optional argument)
+	\else
+	\DTLnewdbentry{list}{sortlabel}{#1}% Add entry sortlabel (optional argument)
+	\fi%
+	\DTLnewdbentry{list}{description}{#2}% Add entry description
+}
+
+\newenvironment{sortedlist}{%
+	\DTLifdbexists{list}{\DTLcleardb{list}}{\DTLnewdb{list}}% Create new/discard old list
+}{%
+	\DTLsort{sortlabel}{list}% Sort list
+	\begin{itemize}%
+		\DTLforeach*{list}{\theDesc=description}{%
+			\item \theDesc}% Print each item
+	\end{itemize}%
+}
+
+\newcommand{\libParameter}[4][]{
+	\ifthenelse{\isempty{#1}}{\textbf{#2} - #3}{\textbf{#2} (\textbf{#4}) - #3}
+}
+
+% robotM20.xml
+\newcommand{\humerusToolFrame}[1][]{
+	\libParameter[#1]{HumerusToolFrame}{The humerus tool frame with respect to the end-effector of the robot. Position is specified in mm. Orientation is specified via Euler angles in degrees. FANUC uses the XYZ extrinsic (or equivalently the zy'x'' intrinsic) convention and that is utilized here.}{R}
+}
+
+\newcommand{\hsToolFrame}[1][]{
+	\libParameter[#1]{HSToolFrame}{The hemisphere tool frame with respect to the end-effector of the robot. Position is specified in mm. Orientation is specified via Euler angles in degrees. FANUC uses the XYZ extrinsic (or equivalently the zy'x'' intrinsic) convention and that is utilized here.}{R}
+}
+
+\newcommand{\velLimits}[1][]{
+	\libParameter[#1]{velLimits}{A 6 component vector specifiying the velocity limits of each of the six joints of the robot - specified in rad/second.}{R}
+}
+
+\newcommand{\urdf}[1][]{
+	\libParameter[#1]{urdf}{File path to the Unified Robotics Description Format (URDF) file for the robot. (e.g. \path{D:\Optimization_Algorithm_Data\m20iag.urdf}).}{R}
+}
+
+\newcommand{\base}[1][]{
+	\libParameter[#1]{base}{The name of the link within the URDF file for the robot representing the base of the robot (e.g. base).}{R}
+}
+
+\newcommand{\ee}[1][]{
+	\libParameter[#1]{endEffector}{The name of the link within the URDF file for the robot representing the end-effector of the robot (e.g. tool0).}{R}
+}
+
+%tpProgram_humerus.xml
+\newcommand{\tpProgramTimer}[1][]{
+	\libParameter[#1]{tpProgramTimer}{The ID of the timer (specified by a positive integer) utilized by FANUC for timing the motion program.}{TP}
+}
+
+\newcommand{\tpProgramUTool}[1][]{
+	\libParameter[#1]{tpProgramUTool}{Tool frame ID (specified by a positive integer) utilized in the FANUC motion program to identify the humerus tool frame.}{TP}
+}
+
+\newcommand{\tpProgramUFrame}[1][]{
+	\libParameter[#1]{tpProgramUFrame}{User frame ID (specified by a positive integer) utilized in the FANUC motion program to identify the reference frame for programmed positions.}{TP}
+}
+
+\newcommand{\tpProgramCntTag}[1][]{
+	\libParameter[#1]{tpProgramCntTag}{The CNT tag to utilize in the FANUC motion program.}{TP}
+}
+
+%parametersM20.xml
+\newcommand{\mocapToRobotLibPath}[1][]{
+	\libParameter[#1]{mocapToRobotLibPath}{Root directory of "Mocap to Robot" library, it should contain \path{initMocapToRobotLib.m}.}{P}
+}
+
+\newcommand{\period}[1][]{
+	\libParameter[#1]{period}{Motion capture sampling period in seconds.}{P}
+}
+
+\newcommand{\smoothAndPlotAllDir}[1][]{
+	\libParameter[#1]{smoothAndPlotAllDir}{Directory path for a single motion capture activity containing multiple subjects (e.g. \path{D:\Motion_Capture_Data\JJ}).}{P}
+}
+
+\newcommand{\smoothAndExportAllDir}[1][]{
+	\libParameter[#1]{smoothAndExportAllDir}{Directory path for a single motion capture activity containing multiple subjects (e.g. \path{D:\Motion_Capture_Data\JJ}).}{P}
+}
+
+\newcommand{\smoothAndPlotFile}[1][]{
+	\libParameter[#1]{smoothAndPlotFile}{File path to a single trial file (e.g.  \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01._V3D.c3d.txt}).}{P}
+}
+
+\newcommand{\smoothAndExportCThreeDFile}[1][]{
+	\libParameter[#1]{smoothAndExportC3DFile}{File path to a single trial file (e.g. \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01._V3D.c3d.txt}).}{P}
+}
+
+\newcommand{\smoothAndExportFile}[1][]{
+	\libParameter[#1]{smoothAndExportFile}{File path where the smoothed trial should be output. (e.g. \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01.smoothFrames.txt}).}{P}
+}
+
+\newcommand{\smoothGaussInterval}[1][]{
+	\libParameter[#1]{smoothGaussInterval}{Gaussian interval (in terms of frames) to use for smoothing.}{P}
+}
+
+\newcommand{\smoothPadLength}[1][]{
+	\libParameter[#1]{smoothPadLength}{Number of stationary frames to amend to beginning and end of trajectory before smoothing so as to avoid smoothing artefacts.}{P}
+}
+
+\newcommand{\smoothPadRemoval}[1][]{
+	\libParameter[#1]{smoothPadRemoval}{Number of frames to remove once trajectory has been amended and smoothed.}{P}
+}
+
+\newcommand{\butterworthCutoff}[1][]{
+	\libParameter[#1]{butterworthCutoff}{Butterworth filter cutoff frequency (in Hz) to utilize for smoothing.}{P}
+}
+
+\newcommand{\butterworthOrder}[1][]{
+	\libParameter[#1]{butterworthOrder}{Butterworth filter order to utilize for smoothing.}{P}
+}
+
+\newcommand{\augmentNumPoints}[1][]{
+	\libParameter[#1]{augmentNumPoints}{A 6-component vector specifying the number of frames to utilize for augmenting the trajectory at the beginning and the end. The first 3 components specify the number of frames for each of the 3 dimensions of position in the motion capture reference frame. The last 3 components specify the number of frames for each of the 3 dimensions of orientation (rotation vector) in the motion capture reference frame. This should be larger than the \textbf{interpNumPoints} parameter.}{P}
+}
+
+\newcommand{\interpNumPoints}[1][]{
+	\libParameter[#1]{interpNumPoints}{A 6-component vector specifying the number of frames to utilize when interpolating the trajectory at the beginning and the end. The first 3 components specify the number of frames for each of the 3 dimensions of position in the motion capture reference frame. The last 3 components specify the number of frames for each of the 3 dimensions of orientation (rotation vector) in the motion capture reference frame. This should be smaller than the \textbf{augmentNumPoints} parameter.}{P}
+}
+
+\newcommand{\plotOptTrajJointsFile}[1][]{
+	\libParameter[#1]{plotOptTrajJointsFile}{File path to an optimized joint space trajectory (e.g. \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01.joints.txt}.)}{P}
+}
+
+\newcommand{\plotOptTrajFramesFile}[1][]{
+	\libParameter[#1]{plotOptTrajFramesFile}{File path to the frames file that served as a desired operational space space trajectory for finding the optimized joint space trajectory (e.g. \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01.smoothFrames.txt}.)}{P}
+}
+
+\newcommand{\plotOptTrajToolframe}[1][]{
+	\libParameter[#1]{plotOptTrajToolframe}{File path to the tool frame that was utilized in the optimization process (e.g. \path{D:\Optimization_Algorithm_Data\Toolframes\newToolframe.csv}.)}{P}
+}
+
+\newcommand{\plotAllOptDir}[1][]{
+	\libParameter[#1]{plotAllOptDir}{Directory path for a single motion capture activity containing multiple subjects (e.g. \path{D:\Motion_Capture_Data\JJ}).}{P}
+}
+
+\newcommand{\processAllOptDir}[1][]{
+	\libParameter[#1]{processAllOptDir}{Directory path for a single motion capture activity containing multiple subjects (e.g. \path{D:\Motion_Capture_Data\JJ}).}{P}
+}
+
+\newcommand{\processTrajOpt}[1][]{
+	\libParameter[#1]{processTrajOpt}{This parameter dictates how the file name of the optimized joint space trajectory is determined. Typically this should remain at \textbf{1} indicating that the file ends in \path{.joints.txt}. See code for other options.}{P}
+}
+
+\newcommand{\subsampleCThreeDFile}[1][]{
+	\libParameter[#1]{subsampleC3DFile}{File path to a single trial file (e.g. \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01._V3D.c3d.txt}).}{P}
+}
+
+\newcommand{\subsamplePerBF}[1][]{
+	\libParameter[#1]{subsamplePerBF}{This parameter dictates the non-uniform subsampling rate (as a fraction of the original trajectory).}{P}
+}
+
+\newcommand{\subsamplePlotCThreeDFile}[1][]{
+	\libParameter[#1]{subsamplePlotC3DFile}{File path to a single trial file (e.g. \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01._V3D.c3d.txt}).}{P}
+}
+
+\newcommand{\subsampleAllDir}[1][]{
+	\libParameter[#1]{subsampleAllDir}{Directory path for a single motion capture activity containing multiple subjects (e.g. \path{D:\Motion_Capture_Data\JJ}).}{P}
+}
+
+\newcommand{\subsamplePerAll}[1][]{
+	\libParameter[#1]{subsamplePerAll}{This parameter dictates the non-uniform subsampling rate (as a fraction of the original trajectory).}{P}
+}
+
+\newcommand{\subsampleEveryOther}[1][]{
+	\libParameter[#1]{subsampleEveryOther}{This parameter dictates the uniform subsampling rate. One frame out of the integer value frames dictated by this parameter are retained from the original trajectory.}{P}
+}
+
+\newcommand{\computeSubsamplingErrorsDir}[1][]{
+	\libParameter[#1]{computeSubsamplingErrorsDir}{Directory path for a single motion capture activity containing multiple subjects (e.g. \path{D:\Motion_Capture_Data\JJ}).}{P}
+}
+
+\newcommand{\subsampleErrorsDir}[1][]{
+	\libParameter[#1]{subsampleErrorsDir}{Directory path for a single motion capture activity containing multiple subjects (e.g. \path{D:\Motion_Capture_Data\JJ}).}{P}
+}
+
+\newcommand{\subsamplingMethodErrors}[1][]{
+	\libParameter[#1]{subsamplingMethodErrors}{The integer value of this parameter dictates whether to use uniform (0) or non-uniform (1) subsampling when computing and processing subsampling errors.}{P}
+}
+
+\newcommand{\tpProgramJointsFile}[1][]{
+	\libParameter[#1]{tpProgramJointsFile}{File path to an optimized joint space trajectory (e.g. \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01.joints.txt}.)}{P}
+}
+
+\newcommand{\tpProgramIndicesFile}[1][]{
+	\libParameter[#1]{tpProgramIndicesFile}{Path to a subsampling file indicating which indices of a trajectory to utilize for subsampling. (e.g. \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01.indices.txt}.)}{P}
+}
+
+\newcommand{\tpProgramMultiplier}[1][]{
+	\libParameter[#1]{tpProgramMultiplier}{A positive real number (usually greater than 1) indicating a multiplier for the average speed between two timepoints in a trajectory.}{P}
+}
+
+\newcommand{\tpProgramJOne}[1][]{
+	\libParameter[#1]{tpProgramJ1}{This parameter's interpretation depends on the \textbf{tpProgramJ1Offset} parameter. This parameter can either specify to offset the angle of the first robot joint for every timepoint in the trajectory by a real number (in degrees). Or, it can specify the angle of the first robot joint for the first timepoint in the trajectory (in degrees) - the angle of the first robot joint for the remaining timepoints is offset relative to the first one.}{P}
+}
+
+\newcommand{\tpProgramJOneOffset}[1][]{
+	\libParameter[#1]{tpProgramJ1Offset}{This parameter specifies whether \textbf{tpProgramJOne} should be treated as an offset angle for the first robot joint for the entire trajectory, or as a specification of the angle of the first robot joint for the first timepoint in the trajectory.}{P}
+}
+
+\newcommand{\axisCalibrationFolder}[2][]{
+	\libParameter[#1]{axisCalibrationFolder}{Path to the folder containing the hemisphere trajectory during the robot reference frame identification procedure. The files produced as part of this procedure are described in \nameref{#2} (e.g. \path{D:\Motion_Verification_Data\JJ\05162018}).}{P}
+}
+
+\newcommand{\axisCalibrationJOneOffset}[1][]{
+	\libParameter[#1]{axisCalibrationJ1Offset}{This parameter specifies the offset from zero of the angle of the first robot joint. This is not to be confused with the \textbf{tpProgramJ1} configuration parameter - the two are not related and are independent of each other.}{P}
+}
+
+\newcommand{\axisCalibrationTcp}[1][]{
+	\libParameter[#1]{axisCalibrationTcp}{This parameter specifies whether to determine the tool center point of the hemisphere from the dataset generated by the robot reference frame identification procedure.}{P}
+}
+
+\newcommand{\axisCalibrationResults}[1][]{
+	\libParameter[#1]{axisCalibrationResults}{This parameter specifies the path to a file where the results of processing the dataset of the robot reference frame identification procedure should be stored.}{P}
+}
+
+\newcommand{\ndiSamplingPeriod}[1][]{
+	\libParameter[#1]{ndiSamplingPeriod}{This parameter specifies the sampling period (in seconds) of the optical tracking analysis hardware, in this case the Optotrak Certus.}{P}
+}
+
+\newcommand{\tickDefinition}[1][]{
+	\libParameter[#1]{tickDefinition}{This parameter specifies the sampling period (in seconds) of the captured robot joint angles from the robot controller.}{P}
+}
+
+\newcommand{\processMocapFolder}[2][]{
+	\libParameter[#1]{processMocapFolder}{Path to the folder containing the trial verification data as decribed in \nameref{#2} (e.g. \path{D:\Motion_Verification_Data\JJ\05162018}).}{P}
+}
+
+\newcommand{\processMocapPrint}[1][]{
+	\libParameter[#1]{processMocapPrint}{The integer value of this parameter determines whether a PDF document containing a summary of the trial verification data processing should be created. A value of 1 indicates that the PDF document should be created, while a value of 0 indicates that the PDF document should NOT be created.}{P}
+}
+
+\newcommand{\processMocapProgramName}[1][]{
+	\libParameter[#1]{processMocapProgramName}{Name of the motion program in the trial verification data that is to be processed (e.g. \path{JJ_FREE_015_01_22_N11}).}{P}
+}
+
+\newcommand{\processMocapCThreeDFile}[1][]{
+	\libParameter[#1]{processMocapC3DFile}{File path to the motion capture trial to utilize for comparison against the trial verification data (e.g. \path{D:\Motion_Capture_Data\JJ\UEK_015\UEK_015_JJ_free_01._V3D.c3d.txt}).}{P}
+}
+
+\newcommand{\processMocapJustGraph}[1][]{
+	\libParameter[#1]{processMocapJustGraph}{The integer value of this parameter determines whether the trial verification data is just graphed (1) or if it undergoes the full processing pipeline (0).}{P}
+}
+
+\newcommand{\postAnalysisResultsFile}[1][]{
+	\libParameter[#1]{postAnalysisResultsFile}{File path to the summary output file of the \textbf{Process NDI Capture} task (e.g. \path{D:\Motion_Verification_Data\JJ\05162018\JJ_FREE_015_02_22_N11_sum.txt}).}{P}
+}
+
+\newcommand{\postAnalysisResultsFolder}[1][]{
+	\libParameter[#1]{postAnalysisResultsFolder}{Folder path to directory containing one experimental session (e.g. \path{D:\Motion_Verification_Data\JJ\05162018}).}{P}
+}
+
+\newcommand{\postAnalysisMainResultsFolder}[1][]{
+	\libParameter[#1]{postAnalysisMainResultsFolder}{Folder path to directory containing multiple experimental sessions (e.g. \path{D:\Motion_Verification_Data\JJ}).}{P}
+}
+
+\newcommand{\postAnalysisDataFolder}[1][]{
+	\libParameter[#1]{postAnalysisDataFolder}{Folder path to the motion capture data directory containing all subjects for the currently analyzed activity (e.g. \path{D:\Motion_Capture_Data\JJ}).}{P}
+}
+
+\newcommand{\postAnalysisPoseRbCs}[1][]{
+	\libParameter[#1]{postAnalysisPoseRbCs}{An array of 6 strings indicating the reference frames and rigid bodies to utilize when analyzing the pose, velocity, and acceleration of the trajectory. The first and second component indicate the reference frame and rigid body for position, respectively. The third and fourth component indicate the reference frame and rigid body for the rotation vector, respectively. The fifth and sixth component indicate the reference frame and rigid body for Euler angles, respectively. The most useful reference frame and rigid body combinations are: (thorax,bone,thorax,bone,thorax,bone). The possible reference frames are: lab (motion capture), robot, and thorax. The possible rigid bodies are: hs (hemisphere) and bone (humerus).}{P}
+}
+
+\newcommand{\postAnalysisVelRbCs}[1][]{
+	\libParameter[#1]{postAnalysisVelRbCs}{See \textbf{postAnalysisPoseRbCs}. In this case, the reference frames and rigid bodies are utilized for linear velocity, angular velocity, and Euler angle rates - in that order.}{P}
+}
+
+\newcommand{\postAnalysisAccRbCs}[1][]{
+	\libParameter[#1]{postAnalysisAccRbCs}{See \textbf{postAnalysisPoseRbCs}. In this case, the reference frames and rigid bodies are utilized for linear acceleration, angular acceleration, and Euler angle acceleration - in that order.}{P}
+}
+
+\newcommand{\postAnalysisPerformDtw}[1][]{
+	\libParameter[#1]{postAnalysisPerformDtw}{The integer value of this parameter determines whether dynamic time-warping is utilized to align the verification and motion capture trajectories in time. An integer value of 1 indicates the use dynamic-time warping, an integer value of 0 indicates the use of cross-correlation.}{P}
+}
+
+\newcommand{\postAnalysisAngAccDtw}[1][]{
+	\libParameter[#1]{postAnalysisAngAccDtw}{The integer value of this parameter determines whether angular acceleration is included in the dynamic time-warping computation if the use of dynamic time-warping is specified in \textbf{postAnalysisPerformDtw}. Since angular acceleration is noisier that other kinematic variables it can skew the alignment procedure. An integer value of 1 indicates that angular acceleration should be utilized while dynamic time-warping, while an integer value of 0 indicates NOT to include angular acceleration.}{P}
+}
+
+\newcommand{\postAnalysisRepeatsAvail}[1][]{
+	\libParameter[#1]{postAnalysisRepeatsAvail}{This parameter indicates how many repeated verification trials are available for a particular trajectory. These repeated verification trials are then time-aligned using cross-correlation and averaged in order to reduce noise in acceleration. Typically, this parameter should be 0 unless repeated verification trials were explicitly collected.}{P}
+}
+
+\newcommand{\postAnalysisOffsetEndpts}[1][]{
+	\libParameter[#1]{postAnalysisOffsetEndpts}{This parameter indicates whether the endpoints of the trajectory should be offset according to the augmentation that was performed when calculating trajectory statistics. An integer value of 1 indicates that the endpoints should be offset, while an integer value of 0 indicates that they should not be offset. Typically this parameter should be set to 1.}{P}
+}
+
+\newcommand{\postAnalysisPlotDiff}[1][]{
+	\libParameter[#1]{postAnalysisPlotDiff}{This parameter indicates whether trend plots graph the difference of the verification trajectory from the motion capture trajectory or the two trajectories are overlayed. An integer value of 1 indicates that the difference of the two trajectories is plotted against a zero baseline. An integer value of 0 indicates that the two trajectories are overlayed when plotted. }{P}
+}
+
+\newcommand{\postAnalysisPlotPercentage}[1][]{
+	\libParameter[#1]{postAnalysisPlotPercentage}{When \textbf{postAnalysisPlotDiff} is set to display differences this parameter governs whether physical units or percentages are shown on the y-axes. An integer value of 1 indicates that percentages are shown, while an integer value of 0 indicates that physical units are shown. When \textbf{postAnalysisPlotDiff} is NOT set to display differences this parameter governs whether the statistics shown on the trend plots have physical units or percentages.}{P}
+}
+
+\newcommand{\postAnalysisCreateGraphs}[1][]{
+	\libParameter[#1]{postAnalysisCreateGraphs}{This parameter determines whether graphs will be displayed on screen during a post-analysis taks. An integer value of 1 indicates that graphs will be displayed on screen, while an integer value of 0 indicates that graphs will NOT be displayed on screen.}{P}
+}
+
+\newcommand{\postAnalysisPrintGraphs}[1][]{
+	\libParameter[#1]{postAnalysisPrintGraphs}{This parameter determines whether graphs will be written to disk during a post-analysis taks. An integer value of 1 indicates that graphs will be written to disk, while an integer value of 0 indicates that graphs will NOT be written to disk.}{P}
+}
+
+\newcommand{\postAnalysisPrintDir}[1][]{
+	\libParameter[#1]{postAnalysisPrintDir}{If \textbf{postAnalysisPrintGraphs} specifies that graphs should be written to disk, this parameter determines the directory where to write the resulting graphs.}{P}
+}
+
+\newcommand{\postAnalysisComputeStats}[1][]{
+	\libParameter[#1]{postAnalysisComputeStats}{This parameter determines whether trajectory statistics will be computed while running a post-analysis task. An integer value of 1 indicates that trajectory statistics will be computed while an integer value of 0 indicates that trajectory statistics will NOT be computed.}{P}
+}
+
+\newcommand{\postAnalysisMonitorNum}[1][]{
+	\libParameter[#1]{postAnalysisMonitorNum}{This parameter indicates the monitor number where the graphs should be generated.}{P}
+}
+
+\newcommand{\batchProcessPrintDir}[1][]{
+	\libParameter[#1]{batchProcessPrintDir}{Directory where graphs for batch processing are created.}{P}
+}
+
+\newcommand{\batchProcessJJMocapData}[1][]{
+	\libParameter[#1]{batchProcessJJMocapData}{Path to the directory for the jumping jacks motion capture data for all subjects (e.g. \path{D:\Motion_Capture_Data\JJ}).}{P}
+}
+
+\newcommand{\batchProcessJLMocapData}[1][]{
+	\libParameter[#1]{batchProcessJLMocapData}{Path to the directory for the jug lifts motion capture data for all subjects (e.g. \path{D:\Motion_Capture_Data\JL}).}{P}
+}
+
+\newcommand{\batchProcessJOMocapData}[1][]{
+	\libParameter[#1]{batchProcessJOMocapData}{Path to the directory for the jogging motion capture data for all subjects (e.g. \path{D:\Motion_Capture_Data\JO}).}{P}
+}
+
+\newcommand{\batchProcessIRMocapData}[1][]{
+	\libParameter[#1]{batchProcessIRMocapData}{Path to the directory for the internal rotation motion capture data for all subjects (e.g. \path{D:\Motion_Capture_Data\IR}).}{P}
+}
+
+\newcommand{\batchProcessJJVerificationData}[1][]{
+	\libParameter[#1]{batchProcessJJVerificationData}{Path to the directory for the jumping jacks robot motion verification data for all subjects (e.g. \path{D:\Motion_Verification_Data\JJ}).}{P}
+}
+
+\newcommand{\batchProcessJLVerificationData}[1][]{
+	\libParameter[#1]{batchProcessJLVerificationData}{Path to the directory for the jug lifts robot motion verification data for all subjects (e.g. \path{D:\Motion_Verification_Data\JL}).}{P}
+}
+
+\newcommand{\batchProcessJOVerificationData}[1][]{
+	\libParameter[#1]{batchProcessJOVerificationData}{Path to the directory for the jogging robot motion verification data for all subjects (e.g. \path{D:\Motion_Verification_Data\JO}).}{P}
+}
+
+\newcommand{\batchProcessIRVerificationData}[1][]{
+	\libParameter[#1]{batchProcessIRVerificationData}{Path to the directory for the internal rotation robot motion verification data for all subjects (e.g. \path{D:\Motion_Verification_Data\IR}).}{P}
+}
+
+\newcommand{\batchProcessJJ}[1][]{
+	\libParameter[#1]{batchProcessJJ}{This parameter determines whether jumping jacks will be batch processed. An integer value of 1 indicates that jumping jacks will be batch processed, while an integer value of 0 indicates that jumping jacks will NOT be batch processed.}{P}
+}
+
+\newcommand{\batchProcessJL}[1][]{
+	\libParameter[#1]{batchProcessJL}{This parameter determines whether jug lifts will be batch processed. An integer value of 1 indicates that jug lifts will be batch processed, while an integer value of 0 indicates that jug lifts will NOT be batch processed.}{P}
+}
+
+\newcommand{\batchProcessJO}[1][]{
+	\libParameter[#1]{batchProcessJO}{This parameter determines whether jogging trials will be batch processed. An integer value of 1 indicates that jogging trials will be batch processed, while an integer value of 0 indicates that jogging trials will NOT be batch processed.}{P}
+}
+
+\newcommand{\batchProcessIR}[1][]{
+	\libParameter[#1]{batchProcessIR}{This parameter determines whether internal rotation trials will be batch processed. An integer value of 1 indicates that internal rotation trials will be batch processed, while an integer value of 0 indicates that internal rotation trials will NOT be batch processed.}{P}
+}

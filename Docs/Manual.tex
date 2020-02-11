@@ -1,0 +1,475 @@
+\documentclass[letterpaper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{pgffor}
+\usepackage{RobotToMocapMacros}
+\pagestyle{empty}
+
+\title{\textbf{Mocap to Robot Software Package User Manual}}
+\author{Klevis Aliaj}
+\date{} % clear date
+
+\newcommand{\packageTask}[6]{
+\subsection*{#1} \label{#2}
+\textbf{Description}: #3 \newline
+\textbf{Path}: \path{tasks/#4} \newline
+\textbf{Configuration Files}: #5 \newline
+\textbf{Parameters}:
+\begin{itemize}
+	\foreach \x in #6
+	{
+		\item \x
+	}
+\end{itemize}
+}
+
+\begin{document}
+\maketitle
+\section{Introduction}
+\paragraph{}
+This user manual aims to provide a brief overview of the "Mocap to Robot" software package. This package provides a set of tasks that aid in transforming motion capture data to a motion program for an industrial robot. It also provides tasks for verifying the resulting robot motion against the original motion capture trajectories. The task of optimally mapping a motion capture trajectory to a robot joint space trajectory is performed within a separate C++ software package. The "Mocap to Robot" package relies on the "Mocap to Robot" software library, which implements the underlying logic that supports the tasks contained in this package. From this perspective, this software package can be seen as a thin wrapper over the "Mocap to Robot" software library that reads parameters from configuration files and makes the appropriate calls to the underlying library functions.
+
+\section{Installation}
+\paragraph{}
+The "Mocap to Robot" software package has been tested using Matlab R2018b and Python 3.6.8. Python was installed as part of the Anaconda 4.7.11 installation which provides the necessary scientific computing packages. The following additional Python packages are necessary:
+\begin{itemize}
+	\item Plotly 4.1.0
+	\item colorlover 0.3.0
+\end{itemize}
+
+\paragraph{}
+This package relies on three configuration files (sample configuration files are supplied as part of each release) in order to function properly. Upon cloning or downloading the "Mocap to Robot" package a "parameters" directory must be created in the root directory of the package and the aforementioned configuration files placed in the "parameters" directory as follows:
+
+\begin{itemize}
+	\item \path{Docs}
+	\item \path{initClasses}
+	\item \path{parameters}
+		\begin{itemize}
+			\item \path{parametersM20.xml}
+			\item \path{robotM20.xml}
+			\item \path{tpProgram_humerus.xml}
+		\end{itemize}
+	\item ...
+\end{itemize}
+
+\paragraph{}
+As mentioned previously, the "Mocap to Robot" software package relies on the "Mocap to Robot" software library, which needs to be downloaded or cloned. It is recommended that the same release version is utilized for both the package and the library. The \textbf{mocapToRobotLibPath} parameter of the \path{parametersM20.xml} configuration file must be updated to point to the root directory of the "Mocap to Robot" software library (which should contain \path{initMocapToRobotLib.m}).
+
+\section{Task Listing}
+\begin{itemize}
+	\item Motion Capture to Robot Motion Program
+		\begin{itemize}
+			\item \hyperref[augmentAndPlotTrajectorySingle]{Augment and Plot Trajectory Single}
+			\item \hyperref[augmentAndPlotTrajectoryAll]{Augment and Plot Trajectory All}
+			\item \hyperref[augmentAndExportTrajectorySingle]{Augment and Export Trajectory Single}
+			\item \hyperref[augmentAndExportTrajectoryAll]{Augment and Export Trajectory All}
+			\item \hyperref[smoothAndPlotByFile]{Smooth and Plot By File}
+			\item \hyperref[smoothAndPlotAll]{Smooth and Plot All}
+			\item \hyperref[smoothAndExportByFile]{Smooth and Export By File}
+			\item \hyperref[smoothAndExportAll]{Smooth and Export All}
+			\item \hyperref[plotOptimizedTrajByFile]{Plot Optimized Trajectory By File}
+			\item \hyperref[plotAllOptimizedTraj]{Plot All Optimized Trajectories}
+			\item \hyperref[processAllOptimizedTraj]{Process All Optimized Trajectories}
+			\item \hyperref[subsampleByFile]{Subsample by File}
+			\item \hyperref[subsamplePlotByFile]{Subsample Plot by File}
+			\item \hyperref[subsampleAll]{Subsample All}
+			\item \hyperref[subsampleAllUniform]{Subsample All Uniformly}
+			\item \hyperref[computeSubsamplingErrors]{Compute Subsampling Errors}
+			\item \hyperref[processAllSubsamplingErrors]{Process Subsampling Errors}
+			\item \hyperref[writeTPProgram]{Write Teach Pendant Program}
+			\item \hyperref[writeTPProgramLinear]{Write Linear Teach Pendant Program}
+		\end{itemize}
+	\item Robot Trajectory Verification
+		\begin{itemize}
+			\item \hyperref[establishHumerusCS]{Establish Humerus Coordinate System}
+			\item \hyperref[ndiToRobotTransform]{NDI to Robot Transform}
+			\item \hyperref[GraphPaths]{Graph Paths}
+			\item \hyperref[SimpleJointPlot]{Simple Joint Plot}
+			\item \hyperref[processNdiCapture]{Process NDI Capture}
+			\item \hyperref[checkFile]{Check File}
+			\item \hyperref[checkMultipleFolders]{Check Multiple Folders}
+			\item \hyperref[checkJoints]{Check Joints}
+			\item \hyperref[postAnalysisFile]{Post Analyze File}
+			\item \hyperref[postAnalysisSingleFolder]{Post Analyze Single Folder}
+			\item \hyperref[postAnalysisMultipleFolders]{Post Analyze Multiple Folders}
+			\item \hyperref[batchProcessAllData]{Batch Process All Data}
+		\end{itemize}
+\end{itemize}
+
+\section{Data Organization} \label{sec:dataOrg}
+\paragraph{}
+Although the intention of this document is to explain the "Mocap to Robot" software package, this section provides a brief overview of the data that this software package analyzes. This is done to provide background for the tasks contained in this package. The motion capture data and the robot trajectory verification data are housed in separate folders.
+\paragraph{}
+The motion capture data is organized first by activity, then by subject. Each subject will have up to 3 trials per activity. The motion capture data for each trial is exported from Visual3D and is contained in a \path{.c3d.txt} file. All the other files associated with a trial are obtained by one of the tasks above.
+\paragraph{}
+The robot trajectory verification data is organized first by activity, then by date upon which the experimental session took place. Each date will contain files related to robot frame identification procedure and one or more trial verifications. The verification data was collected using a custom hemisphere rigid body comprised of 16 light emitting diodes and the Northern Digital Inc. (NDI) Optotrak Certus. The NDI software outputs both the 3D positions of each of the markers and the 6D pose (position and orientation) of the rigid body. The files related to the robot frame identification procedure are:
+\begin{itemize}
+	\item \path{Joint13D.csv} - marker trajectories while robot rotates its 1\textsuperscript{st} joint
+	\item \path{Joint16D.csv} - hemisphere trajectory while robot rotates its 1\textsuperscript{st} joint
+	\item \path{Joint23D.csv} - marker trajectories while robot rotates its 2\textsuperscript{nd} joint
+	\item \path{Joint26D.csv} - hemisphere trajectory while robot rotates its 2\textsuperscript{nd} joint
+	\item \path{Joint43D.csv} - marker trajectories while robot rotates its 4\textsuperscript{th} joint
+	\item \path{Joint46D.csv} - hemisphere trajectory while robot rotates its 4\textsuperscript{th} joint
+	\item \path{Position3D0.csv} - marker trajectories while robot rotates (without translating) about its end-effector joint
+	\item \path{Position6D0.csv}  - hemisphere trajectory while robot rotates (without translating) about its end-effector
+\end{itemize}
+The files related to the trial verification are:
+\begin{itemize}
+	\item \path{[Activity]_[SubjectId]_[TrialId]_[Speed Multiplier]_[(Non)Uniform Subampling][Deprecated Identifiers]_3D.csv} - marker trajectories while robot performs the activity for the subject and trial indicated.
+	\item \path{[Activity]_[SubjectId]_[TrialId]_[Speed Multiplier]_[(Non)Uniform Subampling][Deprecated Identifiers]_6D.csv} - hemisphere trajectory while robot performs the activity for the subject and trial indicated.
+	\item \path{[Activity]_[SubjectId]_[TrialId]_[Speed Multiplier]_[(Non)Uniform Subampling][Deprecated Identifiers]_jointPos.csv} - positions of the robot's joints as captured from the M20ia robot controller.
+	\item \path{[Activity]_[SubjectId]_[TrialId].toolframe.xml} - if the main humerus tool frame was not utilized to recreate this trajectory (activity/subject/trial), then this file contains the tool frame that was utilized.
+\end{itemize}
+
+\section{Configuration Files}
+\subsection{robotM20.xml}
+The \path{robotM20.xml} configuration file contains information regarding the robot utilized (M20ia) as well as the tools attached to the robot. All tasks under \path{tasks/opticalTrackingAnalysis} utilize this configuration file, but only a subset of the tasks under \path{tasks/trajectoryGeneration} utilize this configuration file. This configuration file contains the following parameters:
+\begin{sortedlist}
+	\sortitem[humerusToolFrame]{\humerusToolFrame}
+	\sortitem[hsToolFrame]{\hsToolFrame}
+	\sortitem[velLimits]{\velLimits}
+	\sortitem[urdf]{\urdf}
+	\sortitem[base]{\base}
+	\sortitem[ee]{\ee}
+\end{sortedlist}
+
+\subsection{tpProgram\_humerus.xml}
+The \path{tpProgram_humerus.xml} file contains information regarding the teach pendant (motion) program for the robot utilized (M20ia). Only the \textbf{Write Teach Pendant Program} and \textbf{Write Teach Pendant Program Linear} tasks utilize this configuration file. This configuration file contains the following parameters:
+\begin{sortedlist}
+	\sortitem[tpProgramTimer]{\tpProgramTimer}
+	\sortitem[tpProgramUTool]{\tpProgramUTool}
+	\sortitem[tpProgramUFrame]{\tpProgramUFrame}
+	\sortitem[tpProgramCntTag]{\tpProgramCntTag}
+\end{sortedlist}
+
+\subsection{parametersM20.xml}
+The \path{parameterM20.xml} file contains parameters for all of the tasks detailed in this manual. This configuration file contains the following parameters:
+\begin{sortedlist}
+	\sortitem[mocapToRobotLibPath]{\mocapToRobotLibPath}
+	\sortitem[period]{\period}
+	\sortitem[smoothAndPlotAllDir]{\smoothAndPlotAllDir}
+	\sortitem[smoothAndExportAllDir]{\smoothAndExportAllDir}
+	\sortitem[smoothAndPlotFile]{\smoothAndPlotFile}
+	\sortitem[smoothAndExportC3DFile]{\smoothAndExportCThreeDFile}
+	\sortitem[smoothAndExportFile]{\smoothAndExportFile}
+	\sortitem[smoothGaussInterval]{\smoothGaussInterval}
+	\sortitem[smoothPadLength]{\smoothPadLength}
+	\sortitem[smoothPadRemoval]{\smoothPadRemoval}
+	\sortitem[butterworthCutoff]{\butterworthCutoff}
+	\sortitem[butterworthOrder]{\butterworthOrder}
+	\sortitem[augmentNumPoints]{\augmentNumPoints}
+	\sortitem[interpNumPoints]{\interpNumPoints}
+	\sortitem[plotAllOptDir]{\plotAllOptDir}
+	\sortitem[processAllOptDir]{\processAllOptDir}
+	\sortitem[plotOptTrajJointsFile]{\plotOptTrajJointsFile}
+	\sortitem[plotOptTrajFramesFile]{\plotOptTrajFramesFile}
+	\sortitem[plotOptTrajToolframe]{\plotOptTrajToolframe}
+	\sortitem[processTrajOpt]{\processTrajOpt}
+	\sortitem[subsampleC3DFile]{\subsampleCThreeDFile}
+	\sortitem[subsamplePerBF]{\subsamplePerBF}
+	\sortitem[subsamplePlotC3DFile]{\subsamplePlotCThreeDFile}
+	\sortitem[subsampleAllDir]{\subsampleAllDir}
+	\sortitem[subsamplePerAll]{\subsamplePerAll}
+	\sortitem[subsampleEveryOther]{\subsampleEveryOther}
+	\sortitem[computeSubsamplingErrorsDir]{\computeSubsamplingErrorsDir}
+	\sortitem[subsampleErrorsDir]{\subsampleErrorsDir}
+	\sortitem[subsamplingMethodErrors]{\subsamplingMethodErrors}
+	\sortitem[tpProgramJointsFile]{\tpProgramJointsFile}
+	\sortitem[tpProgramIndicesFile]{\tpProgramIndicesFile}
+	\sortitem[tpProgramMultiplier]{\tpProgramMultiplier}
+	\sortitem[tpProgramJ1]{\tpProgramJOne}
+	\sortitem[tpProgramJ1Offset]{\tpProgramJOneOffset}
+	\sortitem[axisCalibrationFolder]{\axisCalibrationFolder{sec:dataOrg}}
+	\sortitem[axisCalibrationJ1Offset]{\axisCalibrationJOneOffset}
+	\sortitem[axisCalibrationTcp]{\axisCalibrationTcp}
+	\sortitem[axisCalibrationResults]{\axisCalibrationResults}
+	\sortitem[ndiSamplingPeriod]{\ndiSamplingPeriod}
+	\sortitem[tickDefinition]{\tickDefinition}
+	\sortitem[processMocapFolder]{\processMocapFolder{sec:dataOrg}}
+	\sortitem[processMocapPrint]{\processMocapPrint}
+	\sortitem[processMocapProgramName]{\processMocapProgramName}
+	\sortitem[processMocapC3DFile]{\processMocapCThreeDFile}
+	\sortitem[processMocapJustGraph]{\processMocapJustGraph}
+	\sortitem[postAnalysisDataFolder]{\postAnalysisDataFolder}
+	\sortitem[postAnalysisResultsFile]{\postAnalysisResultsFile}
+	\sortitem[postAnalysisResultsFolder]{\postAnalysisResultsFolder}
+	\sortitem[postAnalysisMainResultsFolder]{\postAnalysisMainResultsFolder}
+	\sortitem[postAnalysisPoseRbCs]{\postAnalysisPoseRbCs}
+	\sortitem[postAnalysisVelRbCs]{\postAnalysisVelRbCs}
+	\sortitem[postAnalysisAccRbCs]{\postAnalysisAccRbCs}
+	\sortitem[postAnalysisAngAccDtw]{\postAnalysisAngAccDtw}
+	\sortitem[postAnalysisPerformDtw]{\postAnalysisPerformDtw}
+	\sortitem[postAnalysisRepeatsAvail]{\postAnalysisRepeatsAvail}
+	\sortitem[postAnalysisPlotDiff]{\postAnalysisPlotDiff}
+	\sortitem[postAnalysisPlotPercentage]{\postAnalysisPlotPercentage}
+	\sortitem[postAnalysisCreateGraphs]{\postAnalysisCreateGraphs}
+	\sortitem[postAnalysisPrintGraphs]{\postAnalysisPrintGraphs}
+	\sortitem[postAnalysisPrintDir]{\postAnalysisPrintDir}
+	\sortitem[postAnalysisComputeStats]{\postAnalysisComputeStats}
+	\sortitem[batchProcessPrintDir]{\batchProcessPrintDir}
+	\sortitem[batchProcessJJMocapData]{\batchProcessJJMocapData}
+	\sortitem[batchProcessJLMocapData]{\batchProcessJLMocapData}
+	\sortitem[batchProcessIRMocapData]{\batchProcessIRMocapData}
+	\sortitem[batchProcessJOMocapData]{\batchProcessJOMocapData}
+	\sortitem[batchProcessJJVerificationData]{\batchProcessJJVerificationData}
+	\sortitem[batchProcessJLVerificationData]{\batchProcessJLVerificationData}
+	\sortitem[batchProcessIRVerificationData]{\batchProcessIRVerificationData}
+	\sortitem[batchProcessJOVerificationData]{\batchProcessJOVerificationData}
+	\sortitem[batchProcessJJ]{\batchProcessJJ}
+	\sortitem[batchProcessJL]{\batchProcessJL}
+	\sortitem[batchProcessIR]{\batchProcessIR}
+	\sortitem[batchProcessJO]{\batchProcessJO}
+\end{sortedlist}
+
+\section{Task Descriptions}
+A task can utilize any of the three configuration files. Each task will indicate which configuration file it utilizes. The parameters listed for each task only pertain to the \path{parametersM20.xml} configuration file. If a task utilizes the \path{robotM20.xml} or the \path{tpProgram_humerus.xml} configuration file then it is assumed that it utilizes all of the parameters within that file.
+
+\packageTask
+{Augment and Plot Trajectory Single}
+{augmentAndPlotTrajectorySingle}
+{This task augments the trajectory specified by \textbf{smoothAndPlotFile} with an artificial speed-up and slow-down section by utilizing a 4\textsuperscript{th} degree constant-jerk polynomial for both position and orientation. It then plots the amended trajectory for visual inspection.}
+{trajectoryGeneration/augmentAndPlotTrajectorySingle.m}
+{\path{parametersM20.xml}}
+{{\smoothAndPlotFile,\period,\augmentNumPoints,\interpNumPoints,\smoothGaussInterval}}
+
+\packageTask
+{Augment and Plot Trajectory All}
+{augmentAndPlotTrajectoryAll}
+{This task augments all trajectories for the subjects contained in \textbf{smoothAndPlotAllDir}  with an artificial speed-up and slow-down section by utilizing a 4\textsuperscript{th} degree constant-jerk polynomial for both position and orientation. It then plots the amended trajectories for visual inspection.}
+{trajectoryGeneration/augmentAndPlotTrajectoryAll.m}
+{\path{parametersM20.xml}}
+{{\smoothAndPlotAllDir,\period,\augmentNumPoints,\interpNumPoints,\smoothGaussInterval}}
+
+\packageTask
+{Augment and Export Trajectory Single}
+{augmentAndExportTrajectorySingle}
+{This task augments the trajectory specified by \textbf{smoothAndExportC3DFile} with an artificial speed-up and slow-down section by utilizing a 4\textsuperscript{th} degree constant-jerk polynomial for both position and orientation. It then exports the trajectory to the file specified by \textbf{smoothAndExportFile}.}
+{trajectoryGeneration/augmentAndExportTrajectorySingle.m}
+{\path{parametersM20.xml}}
+{{\smoothAndExportCThreeDFile,\smoothAndExportFile,\period,\augmentNumPoints,\interpNumPoints,\smoothGaussInterval}}
+
+\packageTask
+{Augment and Export Trajectory All}
+{augmentAndExportTrajectoryAll}
+{This task augments all trajectories for the subjects contained in \textbf{smoothAndExportAllDir}  with an artificial speed-up and slow-down section by utilizing a 4\textsuperscript{th} degree constant-jerk polynomial for both position and orientation. It then exports each trajectory individually to a file ending in \path{smoothFrames.txt}.}
+{trajectoryGeneration/augmentAndExportTrajectoryAll.m}
+{\path{parametersM20.xml}}
+{{\smoothAndExportAllDir,\period,\augmentNumPoints,\interpNumPoints,\smoothGaussInterval}}
+
+\packageTask
+{Smooth and Plot By File}
+{smoothAndPlotByFile}
+{This task smooths the trajectory specified by \textbf{smoothAndPlotFile} using a Gaussian filter. It then plots the smoothed trajectory for visual inspection.}
+{trajectoryGeneration/smoothAndPlotByFile.m}
+{\path{parametersM20.xml}}
+{{\smoothAndPlotFile,\period,\smoothGaussInterval,\smoothPadLength,\smoothPadRemoval}}
+
+\packageTask
+{Smooth and Plot All}
+{smoothAndPlotAll}
+{This task smooths all trajectories for the subjects contained in \textbf{smoothAndPlotAllDir} using a Gaussian filter. It then plots the smoothed trajectories for visual inspection.}
+{trajectoryGeneration/smoothAndPlotAll.m}
+{\path{parametersM20.xml}}
+{{\smoothAndPlotAllDir,\period,\smoothGaussInterval,\smoothPadLength,\smoothPadRemoval}}
+
+\packageTask
+{Smooth and Export by File}
+{smoothAndExportByFile}
+{This task smooths the trajectory specified by \textbf{smoothAndExportC3DFile} using a Gaussian filter and exports it to the file specified by \textbf{smoothAndExportFile}.}
+{trajectoryGeneration/smoothAndExportByFile.m}
+{\path{parametersM20.xml}}
+{{\smoothAndExportCThreeDFile,\smoothAndExportFile,\period,\smoothGaussInterval,\smoothPadLength,\smoothPadRemoval}}
+
+\packageTask
+{Smooth and Export All}
+{smoothAndExportAll}
+{This task smooths all trajectories for the subjects contained in \textbf{smoothAndPlotAllDir} using a Gaussian filter.  It then exports each trajectory individually to a file ending in \path{smoothFrames.txt}.}
+{trajectoryGeneration/smoothAndExportAll.m}
+{\path{parametersM20.xml}}
+{{\smoothAndExportAllDir,\period,\smoothGaussInterval,\smoothPadLength,\smoothPadRemoval}}
+
+\packageTask
+{Plot Optimized Trajectory By File}
+{plotOptimizedTrajByFile}
+{This task plots an optimized joint space trajectory specified by \textbf{plotOptTrajJointsFile} and verifies that it matches the desired operational space trajectory specified in \textbf{plotOptTrajFramesFile}. If the \textbf{plotOptTrajToolframe} parameter is blank then the humerus tool frame specified in \path{robotM20.xml} will be utilized.}
+{trajectoryGeneration/plotOptimizedTrajByFile.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\plotOptTrajJointsFile,\plotOptTrajFramesFile,\plotOptTrajToolframe,\period}}
+
+\packageTask
+{Plot All Optimized Trajectories}
+{plotAllOptimizedTraj}
+{This task plots all optimized joint space trajectories for the subjects specified by \textbf{plotAllOptDir} and verifies that they match the desired operational space trajectories. The name of the optimized joint space trajectory file is determined by \textbf{processTrajOpt}, although typically this will simply be a file ending in \path{.joints.txt}. The corresponding desired operational space trajectory is assumed to be a file ending in \path{.smoothFrames.txt}. If a corresponding \path{.toolframe.xml} file is found, the tool frame contained in this file is assumed to have been utilized for the optimization process. Otherwise, the toolframe specified in \path{robotM20.xml} is assumed to have been utilized for the optimization process.}
+{trajectoryGeneration/plotAllOptimizedTraj.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\plotAllOptDir,\processTrajOpt,\period}}
+
+\packageTask
+{Process All Optimized Trajectories}
+{processAllOptimizedTraj}
+{This task examines all optimized joint space trajectories for the subjects specified by \textbf{plotAllOptDir} to verify that they match the desired operational space trajectories and that joint velocity limits have been met. The name of the optimized joint space trajectory file is determined by \textbf{processTrajOpt}, although typically this will simply be a file ending in \path{.joints.txt}. The corresponding desired operational space trajectory is assumed to be a file ending in \path{.smoothFrames.txt}. If a corresponding \path{.toolframe.xml} file is found, the tool frame contained in this file is assumed to have been utilized for the optimization process. Otherwise, the toolframe specified in \path{robotM20.xml} is assumed to have been utilized for the optimization process.}
+{trajectoryGeneration/processAllOptimizedTraj.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\processAllOptDir,\processTrajOpt,\period}}
+
+\packageTask
+{Subsample by File}
+{subsampleByFile}
+{This task non-uniformly subsamples a trajectory according to the subsampling rate specified in \textbf{subsamplePerBF}. It creates a file ending in \path{indices.txt} in the same directory as \textbf{subsampleC3DFile}.}
+{trajectoryGeneration/subsampleByFile.m}
+{\path{parametersM20.xml}}
+{{\subsampleCThreeDFile,\subsamplePerBF,\period}}
+
+\packageTask
+{Subsample Plot by File}
+{subsamplePlotByFile}
+{This task generates plots that aids in the visualization of a subsampled trajectory by plotting the original and subsampled trajectory simultaneously. Unlike most tasks in this software package, this task utilizes Jupyter notebook - specifically the Plotly package.}
+{trajectoryGeneration/SubSamplePlotByFile.ipynb}
+{\path{parametersM20.xml}}
+{{\subsamplePlotCThreeDFile}}
+
+\packageTask
+{Subsample All}
+{subsampleAll}
+{This task non-uniformly subsamples all trajectories for the subjects in \textbf{subsampleAllDir} according to the subsampling rate specified in \textbf{subsamplePerAll}. It creates a file ending in \path{indices.txt} for each of the trial files for each subject in \textbf{subsampleAllDir}.}
+{trajectoryGeneration/subsampleAll.m}
+{\path{parametersM20.xml}}
+{{\subsampleAllDir,\subsamplePerAll,\period}}
+
+\packageTask
+{Subsample All Uniformly}
+{subsampleAllUniform}
+{This task uniformly subsamples all trajectories for the subjects in \textbf{subsampleAllDir} according to the subsampling rate specified in \textbf{subsampleEveryOther}. It creates a file ending in \path{indices.txt} for each of the trial files for each subject in \textbf{subsampleAllDir}.}
+{trajectoryGeneration/subsampleAllUniform.m}
+{\path{parametersM20.xml}}
+{{\subsampleAllDir,\subsampleEveryOther,\period}}
+
+\packageTask
+{Compute Subsampling Errors}
+{computeSubsamplingErrors}
+{This task computes the subsampling error for all the trajectories of the subjects in \textbf{computeSubsamplingErrorsDir}. The \textbf{subsamplingMethodErrors} parameter dictates whether the results of uniform or non-uniform subsampling are utilized. For each trajectory, this task outputs a file ending in \path{ssErrors.txt} or \path{ssErrorsUniform.txt} based on whether uniform or non-uniform subsampling was utilized, respectively, containing the subsampling error associated with every timepoint in the trajectory.}
+{trajectoryGeneration/computeSubsamplingErrors.m}
+{\path{parametersM20.xml}}
+{{\computeSubsamplingErrorsDir,\subsamplingMethodErrors,\period}}
+
+\packageTask
+{Process Subsampling Errors}
+{processAllSubsamplingErrors}
+{This is a convenience task that creates summary statistics upon previously computed subsampling errors for all the trajectories of the subjects in \textbf{subsampleErrorsDir}. The \textbf{subsamplingMethodErrors} parameter dictates whether the results of uniform or non-uniform subsampling are utilized.}
+{trajectoryGeneration/processAllSubsamplingErrors.m}
+{\path{parametersM20.xml}}
+{{\subsampleErrorsDir,\subsamplingMethodErrors}}
+
+\packageTask
+{Write Teach Pendant Program}
+{writeTPProgram}
+{This task write a FANUC motion program with speed specified in deg/sec based on the trajectory specified in \textbf{tpProgramJointsFile}. Since replicating a trajectory allows a degree of freedom about the gravitational axis, specification of the angle of the first robot joint (whose axis of rotation is coincident with the gravitational axis) has been made variable for convenience. Likewise, a parameter for multiplying the computed average speed between two timepoints is supplied since the motion program expects the maximum, not average, speed between two timepoints. This parameter must be determined empirically and varies by trajectory.}
+{trajectoryGeneration/writeTPProgram.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}, \path{tpProgram_humerus.xml}}
+{{\tpProgramJointsFile,\tpProgramIndicesFile,\tpProgramJOne,\tpProgramJOneOffset,\tpProgramMultiplier}}
+
+\packageTask
+{Write Linear Teach Pendant Program}
+{writeTPProgramLinear}
+{This task write a FANUC motion program with speed specified in mm/sec based on the trajectory specified in \textbf{tpProgramJointsFile}. Since replicating a trajectory allows a degree of freedom about the gravitational axis, specification of the angle of the first robot joint (whose axis of rotation is coincident with the gravitational axis) has been made variable for convenience. Likewise, a parameter for multiplying the computed average speed between two timepoints is supplied since the motion program expects the maximum, not average, speed between two timepoints. This parameter must be determined empirically and varies by trajectory.}
+{trajectoryGeneration/writeTPProgramLinear.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}, \path{tpProgram_humerus.xml}}
+{{\tpProgramJointsFile,\tpProgramIndicesFile,\tpProgramJOne,\tpProgramJOneOffset,\tpProgramMultiplier}}
+
+\packageTask
+{Establish Humerus Coordinate System}
+{establishHumerusCS}
+{This task establishes the rigid body relationship between the end-effector and the humerus. The input dataset for this task is in the format of a saved Matlab workspace and the required variables are described in the header of the task. The only reason why \path{parameterM20.xml} is needed is to specify the \textbf{mocapToRobotLibPath}.}
+{opticalTrackingAnalysis/establishHumerusCS.m}
+{\path{parametersM20.xml}}
+{{None}}
+
+\packageTask
+{NDI to Robot Transform}
+{ndiToRobotTransform}
+{This task processes the dataset created by the robot reference frame identification procedure and establishes the robot frame within the optical tracking frame as well as the rigid body relationship between the hemisphere and the robot end-effector. The robot reference frame identification procedure can be offset (via the teach pendant) for the first robot joint depending on the position of the optical tracking system during the experimental session. The \textbf{axisCalibrationJ1Offset} parameter specifies this offset so it can be properly accounted for during computations.}
+{opticalTrackingAnalysis/ndiToRobotTransform.m}
+{\path{parametersM20.xml}}
+{{\axisCalibrationFolder{sec:dataOrg},\axisCalibrationJOneOffset,\axisCalibrationTcp,\axisCalibrationResults}}
+
+\packageTask
+{Graph Paths}
+{GraphPaths}
+{This task graphs the position of the hemisphere as the robot rotates about its end-effector without translating during the robot reference frame identification procedure. This task is implemented as a Jupyter notebook.}
+{opticalTrackingAnalysis/GraphPaths.ipynb}
+{\path{parametersM20.xml}}
+{{\axisCalibrationFolder{sec:dataOrg}}}
+	
+\packageTask
+{Simple Joint Plot}
+{SimpleJointPlot}
+{This task graphs the position of the hemisphere as the robot rotates its 1\textsuperscript{st}, 2\textsuperscript{nd}, and 4\textsuperscript{th} joints during the robot reference frame identification procedure. This task is implemented as a Jupyter notebook.}
+{opticalTrackingAnalysis/SimpleJointPlot.ipynb}
+{\path{parametersM20.xml}}
+{{\axisCalibrationFolder{sec:dataOrg}}}
+
+\packageTask
+{Process NDI Capture}
+{processNdiCapture}
+{This task processes the trial verification data files (see \nameref{sec:dataOrg}) against the motion capture trial specified by \textbf{processMocapC3DFile}. This task aligns the trajectory to be verified (achieved) against the motion capture trajectory (desired) either automatically (jumping jacks) or semi-automatically (all other activities). Based on the alignment process, it computes a velocity multiplier by which the currently programmed velocities should be multiplied. Multiple iterations of motion program generation, verification, and velocity multiplication should stabilize the velocity multiplier to approximately unity. This task outputs a file ending in \path{_sum.txt}, a necessary component of the post-processing pipeline, summarizing the processing results.}
+{opticalTrackingAnalysis/processNdiCapture.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\processMocapFolder{sec:dataOrg},\processMocapProgramName,\processMocapCThreeDFile,\butterworthCutoff,\butterworthOrder,\period,\ndiSamplingPeriod,\tickDefinition,\processMocapPrint,\processMocapJustGraph}}
+
+\packageTask
+{Check File}
+{checkFile}
+{This task provides a visual comparison of the trial verification data against the motion capture trajectory taking into account position, velocity, and acceleration.}
+{opticalTrackingAnalysis/checkFile.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\postAnalysisResultsFile,\postAnalysisDataFolder,\period,\ndiSamplingPeriod,\tickDefinition,\butterworthCutoff,\butterworthOrder,\postAnalysisPoseRbCs,\postAnalysisVelRbCs,\postAnalysisAccRbCs,\postAnalysisPerformDtw,\postAnalysisAngAccDtw,\postAnalysisOffsetEndpts,\postAnalysisRepeatsAvail,\postAnalysisPlotDiff,\postAnalysisPlotPercentage,\postAnalysisMonitorNum}}
+
+\packageTask
+{Check Multiple Folders}
+{checkMultipleFolders}
+{This task is analogous to the \textbf{Check File} task but runs over multiple experimental sessions.}
+{opticalTrackingAnalysis/checkMultipleFolders.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\postAnalysisMainResultsFolder,\postAnalysisDataFolder,\period,\ndiSamplingPeriod,\tickDefinition,\butterworthCutoff,\butterworthOrder,\postAnalysisPoseRbCs,\postAnalysisVelRbCs,\postAnalysisAccRbCs,\postAnalysisPerformDtw,\postAnalysisAngAccDtw,\postAnalysisOffsetEndpts,\postAnalysisRepeatsAvail,\postAnalysisPlotDiff,\postAnalysisPlotPercentage,\postAnalysisMonitorNum}}
+
+\packageTask
+{Check Joints}
+{checkJoints}
+{This task provides a visual comparison of the joint angles, velocities, and acceleration as captured from the robot controller (actual) vs the optimized joint space trajectory (desired).}
+{opticalTrackingAnalysis/checkJoints.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\postAnalysisResultsFile,\postAnalysisDataFolder,\period,\tickDefinition,\postAnalysisMonitorNum}}
+
+\packageTask
+{Post Analyze File}
+{postAnalysisFile}
+{This task provides similar functionality to the \textbf{Check File} task. The major difference is that the resulting graphs can also be written to disk for later analysis.}
+{opticalTrackingAnalysis/postAnalysisFile.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\postAnalysisResultsFile,\postAnalysisDataFolder,\period,\ndiSamplingPeriod,\tickDefinition,\butterworthCutoff,\butterworthOrder,\postAnalysisPoseRbCs,\postAnalysisVelRbCs,\postAnalysisAccRbCs,\postAnalysisPerformDtw,\postAnalysisAngAccDtw,\postAnalysisOffsetEndpts,\postAnalysisRepeatsAvail,\postAnalysisCreateGraphs,\postAnalysisPrintGraphs,\postAnalysisComputeStats,\postAnalysisPlotDiff,\postAnalysisPlotPercentage,\postAnalysisPrintDir}}
+
+\packageTask
+{Post Analyze Single Folder}
+{postAnalysisSingleFolder}
+{This task is similar to the \textbf{Post Analyze File} task but it analyzes all trial verification data in a single folder, i.e. an experimental session.}
+{opticalTrackingAnalysis/postAnalysisSingleFolder.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\postAnalysisResultsFolder,\postAnalysisDataFolder,\period,\ndiSamplingPeriod,\tickDefinition,\butterworthCutoff,\butterworthOrder,\postAnalysisPoseRbCs,\postAnalysisVelRbCs,\postAnalysisAccRbCs,\postAnalysisPerformDtw,\postAnalysisAngAccDtw,\postAnalysisOffsetEndpts,\postAnalysisRepeatsAvail,\postAnalysisCreateGraphs,\postAnalysisPrintGraphs,\postAnalysisComputeStats,\postAnalysisPlotDiff,\postAnalysisPlotPercentage,\postAnalysisPrintDir}}
+
+\packageTask
+{Post Analyze Multiple Folders}
+{postAnalysisMultipleFolders}
+{This task is similar to the \textbf{Post Analyze File} task but it analyzes all trial verification data for multiple folders, i.e. multiple experimental sessions.}
+{opticalTrackingAnalysis/postAnalysisMultipleFolders.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\postAnalysisMainResultsFolder,\postAnalysisDataFolder,\period,\ndiSamplingPeriod,\tickDefinition,\butterworthCutoff,\butterworthOrder,\postAnalysisPoseRbCs,\postAnalysisVelRbCs,\postAnalysisAccRbCs,\postAnalysisPerformDtw,\postAnalysisAngAccDtw,\postAnalysisOffsetEndpts,\postAnalysisRepeatsAvail,\postAnalysisCreateGraphs,\postAnalysisPrintGraphs,\postAnalysisComputeStats,\postAnalysisPlotDiff,\postAnalysisPlotPercentage,\postAnalysisPrintDir}}
+
+\packageTask
+{Batch Process All Data}
+{batchProcessAllData}
+{This task batch processes all trial verification data creating individual and summary statistics, as well as trend plots for pose, velocity, and acceleration.}
+{opticalTrackingAnalysis/batchProcessAllData.m}
+{\path{parametersM20.xml}, \path{robotM20.xml}}
+{{\batchProcessPrintDir,\batchProcessJJ,\batchProcessJL,\batchProcessIR,\batchProcessJO,\batchProcessJJMocapData,\batchProcessJLMocapData,\batchProcessJOMocapData,\batchProcessIRMocapData,\batchProcessJJVerificationData,\batchProcessJLVerificationData,\batchProcessJOVerificationData,\batchProcessIRVerificationData,\period,\ndiSamplingPeriod,\tickDefinition,\butterworthCutoff,\butterworthOrder,\postAnalysisPoseRbCs,\postAnalysisVelRbCs,\postAnalysisAccRbCs,\postAnalysisOffsetEndpts}}
+
+\end{document}
